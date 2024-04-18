@@ -1,1 +1,1 @@
-Cái này là file source code BTL gốc
+Ở đây đã update nhỏ cho schedular và phần code TODO ở phần mm-memphy.c
