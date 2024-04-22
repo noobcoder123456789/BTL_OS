@@ -1,1 +1,1 @@
-Ở đây đã update nhỏ cho schedular và phần code TODO ở phần mm-memphy.c
+Ở đây đã "tạm" hoàn thành phần memory
