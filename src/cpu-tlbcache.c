@@ -29,7 +29,7 @@
  *  @pgnum: page number
  *  @value: obtained value
  */
-int tlb_cache_read(struct memphy_struct * mp, int pid, int pgnum, BYTE value)
+int tlb_cache_read(struct memphy_struct * mp, int pid, int pgnum, BYTE* value)
 {
    /* TODO: the identify info is mapped to 
     *      cache line by employing:

@@ -1,4 +1,4 @@
-//#ifdef MM_PAGING
+   //#ifdef MM_PAGING
 /*
  * PAGING based Memory Management
  * Memory physical module mm/mm-memphy.c
@@ -142,7 +142,7 @@ int MEMPHY_get_freefp(struct memphy_struct *mp, int *retfpn)
    struct framephy_struct *fp = mp->free_fp_list;
 
    if (fp == NULL)
-     return -1;
+      return -1;
 
    *retfpn = fp->fpn;
    mp->free_fp_list = fp->fp_next;
@@ -157,11 +157,19 @@ int MEMPHY_get_freefp(struct memphy_struct *mp, int *retfpn)
 
 int MEMPHY_dump(struct memphy_struct * mp)
 {
-    /*TODO dump memphy contnt mp->storage 
-     *     for tracing the memory content
-     */
+   /*TODO dump memphy contnt mp->storage 
+   *     for tracing the memory content
+   */
 
-    return 0;
+   if(!mp || !mp->storage) {
+      return -1;
+   }
+
+   free(mp->storage);
+
+   // TLBMEMPHY_dump(&mp);
+
+   return 0;
 }
 
 int MEMPHY_put_freefp(struct memphy_struct *mp, int fpn)
