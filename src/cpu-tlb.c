@@ -21,6 +21,7 @@ int tlb_change_all_page_tables_of(struct pcb_t *proc,  struct memphy_struct * mp
   /* TODO update all page table directory info 
    *      in flush or wipe TLB (if needed)
    */
+  
 
   return 0;
 }
@@ -28,6 +29,25 @@ int tlb_change_all_page_tables_of(struct pcb_t *proc,  struct memphy_struct * mp
 int tlb_flush_tlb_of(struct pcb_t *proc, struct memphy_struct * mp)
 {
   /* TODO flush tlb cached*/
+  if(!proc || !proc->tlb) {
+    return -1;
+  }
+
+  /* 
+   * traverse all TLB 
+   * then flush each frame
+  */
+  struct framephy_struct *curr_proc_used_fp_list_it = proc->tlb->used_fp_list;
+
+  while(curr_proc_used_fp_list_it) {
+    /* flush the current frame*/
+    curr_proc_used_fp_list_it->owner = NULL; 
+    /* move to the next frame */
+    curr_proc_used_fp_list_it = curr_proc_used_fp_list_it->fp_next;
+  }
+
+  proc->tlb->used_fp_list = NULL;
+  curr_proc_used_fp_list_it = NULL;
 
   return 0;
 }

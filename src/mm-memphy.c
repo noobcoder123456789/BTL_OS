@@ -165,9 +165,11 @@ int MEMPHY_dump(struct memphy_struct * mp)
       return -1;
    }
 
-   free(mp->storage);
-
-   // TLBMEMPHY_dump(&mp);
+   int i;
+   for(i = 0; i < mp->maxsz; i ++) {
+      printf("%c", mp->storage[i]);
+   }
+   printf("\n");
 
    return 0;
 }
