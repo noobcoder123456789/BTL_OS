@@ -1,1 +1,1 @@
-Ở đây đã "tạm" hoàn thành phần memory
+Ở đây "tạm" hoàn thành TLB và cần phải update lại phần TODO ở mm.c vì khá lỏd
