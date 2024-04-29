@@ -91,6 +91,15 @@
 #define INCLUDE(x1,x2,y1,y2) (((y1-x1)*(x2-y2)>=0)?1:0)
 #define OVERLAP(x1,x2,y1,y2) (((y2-x1)*(x2-y1)>=0)?1:0)
 
+/* Our group's code */
+struct vm_area_struct *get_vma_by_num(struct mm_struct *mm, int vmaid);
+struct vm_rg_struct *get_symrg_byid(struct mm_struct *mm, int rgid);
+int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller);
+int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller);
+int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller);
+struct vm_rg_struct* get_vm_area_node_at_brk(struct pcb_t *caller, int vmaid, int size, int alignedsz);
+/* Our group's code */
+
 /* VM region prototypes */
 struct vm_rg_struct * init_vm_rg(int rg_start, int rg_endi);
 int enlist_vm_rg_node(struct vm_rg_struct **rglist, struct vm_rg_struct* rgnode);
@@ -115,6 +124,16 @@ int __free(struct pcb_t *caller, int vmaid, int rgid);
 int __read(struct pcb_t *caller, int vmaid, int rgid, int offset, BYTE *data);
 int __write(struct pcb_t *caller, int vmaid, int rgid, int offset, BYTE value);
 int init_mm(struct mm_struct *mm, struct pcb_t *caller);
+
+/* Our group's code */
+int tlb_cache_read(struct memphy_struct * mp, int pid, int pgnum, int *value);
+int tlb_cache_write(struct memphy_struct *mp, int pid, int pgnum, int value);
+int TLBMEMPHY_read(struct memphy_struct * mp, int addr, BYTE *value);
+int TLBMEMPHY_write(struct memphy_struct * mp, int addr, BYTE data);
+int TLBMEMPHY_dump(struct memphy_struct * mp);
+int init_tlbmemphy(struct memphy_struct *mp, int max_size);
+int free_pcb_memph(struct pcb_t *caller);
+/* Our group's code */
 
 /* CPUTLB prototypes */
 int tlb_change_all_page_tables_of(struct pcb_t *proc,  struct memphy_struct * mp);

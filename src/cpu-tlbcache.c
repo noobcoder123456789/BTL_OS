@@ -19,6 +19,7 @@
 
 #include "mm.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 #define init_tlbcache(mp,sz,...) init_memphy(mp, sz, (1, ##__VA_ARGS__))
 

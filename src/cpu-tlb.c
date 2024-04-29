@@ -89,13 +89,12 @@ int tlballoc(struct pcb_t *proc, uint32_t size, uint32_t reg_index)
   }
   
   /* If alloc succeed then we put it into TLB */
-  int frmnum = -1;
   int TLB_SIZE = proc->tlb->used_fp_list->owner->pgd_size;
-  struct vm_rg_struct *currg = get_symrg_byid(proc->tlb, reg_index);
-  int addr = currg->rg_start;
   int pgn = PAGING_PGN(addr);
   int fpn = PAGING_FPN(proc->tlb->used_fp_list->owner->pgd[pgn % TLB_SIZE]);
-  tlb_cache_write(proc->tlb, proc->pid, pgn, fpn);
+  if(tlb_cache_write(proc->tlb, proc->pid, pgn, fpn) < 0) {
+    return -1;
+  }
   /* Our group's code */
 
   return val;
@@ -116,7 +115,7 @@ int tlbfree_data(struct pcb_t *proc, uint32_t reg_index)
   /* Our group's code */
   int frmnum = -1;
   int TLB_SIZE = proc->tlb->used_fp_list->owner->pgd_size;
-  struct vm_rg_struct *currg = get_symrg_byid(proc->tlb, reg_index);
+  struct vm_rg_struct *currg = get_symrg_byid(proc->tlb->used_fp_list->owner, reg_index);
   int addr = currg->rg_start;
   int pgn = PAGING_PGN(addr);
   tlb_cache_read(proc->tlb, proc->pid, pgn, &frmnum);
@@ -156,7 +155,7 @@ int tlbread(struct pcb_t * proc, uint32_t source,
   /* Our group's code */
   /* hình như source là region id */
   int TLB_SIZE = proc->tlb->used_fp_list->owner->pgd_size;
-  struct vm_rg_struct *currg = get_symrg_byid(proc->tlb, source);
+  struct vm_rg_struct *currg = get_symrg_byid(proc->tlb->used_fp_list->owner, source);
   int addr = currg->rg_start + offset;
   int pgn = PAGING_PGN(addr);
   tlb_cache_read(proc->tlb, proc->pid, pgn, &frmnum);
@@ -177,7 +176,7 @@ int tlbread(struct pcb_t * proc, uint32_t source,
 
   int val = __read(proc, 0, source, offset, &data);
 
-  destination = (uint32_t) data;
+  *destination = (uint32_t) data;
 
   /* TODO update TLB CACHED with frame num of recent accessing page(s)*/
   /* by using tlb_cache_read()/tlb_cache_write()*/
@@ -212,8 +211,7 @@ int tlbread(struct pcb_t * proc, uint32_t source,
 int tlbwrite(struct pcb_t * proc, BYTE data,
              uint32_t destination, uint32_t offset)
 {
-  int val;
-  BYTE frmnum = -1;
+  int val, frmnum = -1;
 
   /* TODO retrieve TLB CACHED frame num of accessing page(s))*/
   /* by using tlb_cache_read()/tlb_cache_write()
@@ -221,7 +219,7 @@ int tlbwrite(struct pcb_t * proc, BYTE data,
 
   /* Our group's code */
   int TLB_SIZE = proc->tlb->used_fp_list->owner->pgd_size;
-  struct vm_rg_struct *currg = get_symrg_byid(proc->tlb, destination);
+  struct vm_rg_struct *currg = get_symrg_byid(proc->tlb->used_fp_list->owner, destination);
   int addr = currg->rg_start + offset;
   int pgn = PAGING_PGN(addr);
   tlb_cache_read(proc->tlb, proc->pid, pgn, &frmnum);
