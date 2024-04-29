@@ -1,1 +1,1 @@
-Ở đây "tạm" hoàn thành TLB và cần phải update lại phần TODO ở mm.c vì khá lỏd
+Ở đây đã hoàn thành xong TLB nhưng mà cần phải update lại mm.c cụ thể là ở hàm vmap_page_range và alloc_pages_range
