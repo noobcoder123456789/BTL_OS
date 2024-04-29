@@ -100,12 +100,14 @@ int vmap_page_range(struct pcb_t *caller, // process call
    *      in page table caller->mm->pgd[]
    */
 
+  /* Our group's code */
   for(; pgit < pgnum; pgit++) {
-    caller->mm->pgd[pgit] = addr + PAGING_PAGESZ * pgit;
+    caller->mm->pgd[pgit + pgn] = addr + PAGING_PAGESZ * pgit;
     /* Tracking for later page replacement activities (if needed)
     * Enqueue new usage page */
     enlist_pgn_node(&caller->mm->fifo_pgn, pgn+pgit);
   }   
+  /* Our group's code */
 
   return 0;
 }
@@ -121,6 +123,10 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
 {
   int pgit, fpn;
   //struct framephy_struct *newfp_str;
+  
+  /* Our group's code */
+  *frm_lst = malloc(sizeof(struct framephy_struct));
+  /* Our group's code */
 
   for(pgit = 0; pgit < req_pgnum; pgit++)
   {

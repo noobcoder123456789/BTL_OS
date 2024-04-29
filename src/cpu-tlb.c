@@ -21,33 +21,49 @@ int tlb_change_all_page_tables_of(struct pcb_t *proc,  struct memphy_struct * mp
   /* TODO update all page table directory info 
    *      in flush or wipe TLB (if needed)
    */
-  
 
+  /* Our group's code */
+  if(!mp || !proc) {
+    return -1;
+  }
+
+  int i;
+  for(i = 0; i < (1 << FIRST_LV_LEN); i ++) {
+    if(!proc->page_table->table[i].next_lv) {
+      continue;
+    }
+
+    int j;
+    for(j = 0; j < (1 << SECOND_LV_LEN); j++) {
+      /* assign the virtual index at first layer to all second layer member*/
+      proc->page_table->table[i].next_lv->table[j].v_index = proc->page_table->table[i].v_index;
+    }
+  }
+
+  tlb_flush_tlb_of(proc, mp);
+  /* Our group's code */
+  
   return 0;
 }
 
 int tlb_flush_tlb_of(struct pcb_t *proc, struct memphy_struct * mp)
 {
   /* TODO flush tlb cached*/
+
+  /* Our group's code */
   if(!proc || !proc->tlb) {
     return -1;
   }
 
-  /* 
-   * traverse all TLB 
-   * then flush each frame
-  */
-  struct framephy_struct *curr_proc_used_fp_list_it = proc->tlb->used_fp_list;
+  mp = proc->tlb;
 
-  while(curr_proc_used_fp_list_it) {
-    /* flush the current frame*/
-    curr_proc_used_fp_list_it->owner = NULL; 
-    /* move to the next frame */
-    curr_proc_used_fp_list_it = curr_proc_used_fp_list_it->fp_next;
+  int i;
+  for(i = 0; i < mp->used_fp_list->owner->pgd_size; i ++) {
+    mp->used_fp_list->owner->pgd[i] = -1;
+    mp->used_fp_list->owner->pidd[i] = -1;
+    mp->used_fp_list->owner->frmnumd[i] = -1;
   }
-
-  proc->tlb->used_fp_list = NULL;
-  curr_proc_used_fp_list_it = NULL;
+  /* Our group's code */
 
   return 0;
 }
@@ -67,6 +83,21 @@ int tlballoc(struct pcb_t *proc, uint32_t size, uint32_t reg_index)
   /* TODO update TLB CACHED frame num of the new allocated page(s)*/
   /* by using tlb_cache_read()/tlb_cache_write()*/
 
+  /* Our group's code */
+  if(val + 1 == 0) {
+    return val;
+  }
+  
+  /* If alloc succeed then we put it into TLB */
+  int frmnum = -1;
+  int TLB_SIZE = proc->tlb->used_fp_list->owner->pgd_size;
+  struct vm_rg_struct *currg = get_symrg_byid(proc->tlb, reg_index);
+  int addr = currg->rg_start;
+  int pgn = PAGING_PGN(addr);
+  int fpn = PAGING_FPN(proc->tlb->used_fp_list->owner->pgd[pgn % TLB_SIZE]);
+  tlb_cache_write(proc->tlb, proc->pid, pgn, fpn);
+  /* Our group's code */
+
   return val;
 }
 
@@ -82,6 +113,21 @@ int tlbfree_data(struct pcb_t *proc, uint32_t reg_index)
   /* TODO update TLB CACHED frame num of freed page(s)*/
   /* by using tlb_cache_read()/tlb_cache_write()*/
 
+  /* Our group's code */
+  int frmnum = -1;
+  int TLB_SIZE = proc->tlb->used_fp_list->owner->pgd_size;
+  struct vm_rg_struct *currg = get_symrg_byid(proc->tlb, reg_index);
+  int addr = currg->rg_start;
+  int pgn = PAGING_PGN(addr);
+  tlb_cache_read(proc->tlb, proc->pid, pgn, &frmnum);
+
+  if(frmnum != -1) {
+    /* If TLB hit then free that TLB entry */
+    proc->tlb->used_fp_list->owner->frmnumd[pgn % TLB_SIZE] = -1;
+    proc->tlb->used_fp_list->owner->pidd[pgn % TLB_SIZE] = -1;
+  }
+  /* Our group's code */
+
   return 0;
 }
 
@@ -93,13 +139,28 @@ int tlbfree_data(struct pcb_t *proc, uint32_t reg_index)
  *@destination: destination storage
  */
 int tlbread(struct pcb_t * proc, uint32_t source,
-            uint32_t offset, 	uint32_t destination) 
+            uint32_t offset, 	uint32_t *destination) 
 {
-  BYTE data, frmnum = -1;
+  /* 
+   * we just add * for destination because
+   * we think that we need the return value after 
+   * reading the TLB cache
+   */
+  BYTE data;
+  int frmnum = -1;
 	
   /* TODO retrieve TLB CACHED frame num of accessing page(s)*/
   /* by using tlb_cache_read()/tlb_cache_write()*/
   /* frmnum is return value of tlb_cache_read/write value*/
+
+  /* Our group's code */
+  /* hình như source là region id */
+  int TLB_SIZE = proc->tlb->used_fp_list->owner->pgd_size;
+  struct vm_rg_struct *currg = get_symrg_byid(proc->tlb, source);
+  int addr = currg->rg_start + offset;
+  int pgn = PAGING_PGN(addr);
+  tlb_cache_read(proc->tlb, proc->pid, pgn, &frmnum);
+  /* Our group's code */
 	
 #ifdef IODUMP
   if (frmnum >= 0)
@@ -121,6 +182,24 @@ int tlbread(struct pcb_t * proc, uint32_t source,
   /* TODO update TLB CACHED with frame num of recent accessing page(s)*/
   /* by using tlb_cache_read()/tlb_cache_write()*/
 
+  /* Our group's code */
+  if(frmnum < 0) {
+    /* 
+     * If the frame num of recent accessing page(s) is not present in TLB 
+     * then put it in TLB by direct mapping technique
+     */    
+
+    if(pg_getpage(proc->mm, pgn, &frmnum, proc) != 0) {
+      /* Get the page to MEMRAM, swap from MEMSWAP if needed */
+      return -1; /* invalid page access */
+    }  
+
+    proc->tlb->used_fp_list->owner->pidd[source % TLB_SIZE] = proc->pid;
+    proc->tlb->used_fp_list->owner->pgd[source % TLB_SIZE] = pgn;
+    proc->tlb->used_fp_list->owner->frmnumd[source % TLB_SIZE] = frmnum;
+  }
+  /* Our group's code */
+
   return val;
 }
 
@@ -140,6 +219,14 @@ int tlbwrite(struct pcb_t * proc, BYTE data,
   /* by using tlb_cache_read()/tlb_cache_write()
   frmnum is return value of tlb_cache_read/write value*/
 
+  /* Our group's code */
+  int TLB_SIZE = proc->tlb->used_fp_list->owner->pgd_size;
+  struct vm_rg_struct *currg = get_symrg_byid(proc->tlb, destination);
+  int addr = currg->rg_start + offset;
+  int pgn = PAGING_PGN(addr);
+  tlb_cache_read(proc->tlb, proc->pid, pgn, &frmnum);
+  /* Our group's code */
+
 #ifdef IODUMP
   if (frmnum >= 0)
     printf("TLB hit at write region=%d offset=%d value=%d\n",
@@ -157,6 +244,24 @@ int tlbwrite(struct pcb_t * proc, BYTE data,
 
   /* TODO update TLB CACHED with frame num of recent accessing page(s)*/
   /* by using tlb_cache_read()/tlb_cache_write()*/
+
+  /* Our group's code */
+  if(frmnum < 0) {
+    /* 
+     * If the frame num of recent accessing page(s) is not present in TLB 
+     * then put it in TLB by direct mapping technique
+     */    
+
+    if(pg_getpage(proc->mm, pgn, &frmnum, proc) != 0) {
+      /* Get the page to MEMRAM, swap from MEMSWAP if needed */
+      return -1; /* invalid page access */
+    }  
+
+    proc->tlb->used_fp_list->owner->pidd[destination % TLB_SIZE] = proc->pid;
+    proc->tlb->used_fp_list->owner->pgd[destination % TLB_SIZE] = pgn;
+    proc->tlb->used_fp_list->owner->frmnumd[destination % TLB_SIZE] = frmnum;
+  }
+  /* Our group's code */
 
   return val;
 }

@@ -161,15 +161,17 @@ int MEMPHY_dump(struct memphy_struct * mp)
    *     for tracing the memory content
    */
 
+   /* Our group's code */
    if(!mp || !mp->storage) {
       return -1;
    }
 
    int i;
    for(i = 0; i < mp->maxsz; i ++) {
-      printf("%c", mp->storage[i]);
+      printf("%c\n", mp->storage[i]);
    }
    printf("\n");
+   /* Our group's code */
 
    return 0;
 }

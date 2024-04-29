@@ -11,7 +11,7 @@ typedef uint32_t addr_t;
 
 struct pgn_t{
    int pgn;
-   struct pgn_t *pg_next; 
+   struct pgn_t *pg_next;
 };
 
 /*
@@ -47,6 +47,12 @@ struct vm_area_struct {
  */
 struct mm_struct {
    uint32_t *pgd;
+
+   /* Our group's code */
+   int pgd_size;
+   uint32_t *pidd; /* pidd is an array which store pid */
+   uint32_t *frmnumd; /* frame number's array in TLB */
+   /* Our group's code */
 
    struct vm_area_struct *mmap;
 

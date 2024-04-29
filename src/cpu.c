@@ -78,7 +78,7 @@ int run(struct pcb_t * proc) {
 		break;
 	case READ:
 #ifdef CPU_TLB
-		stat = tlbread(proc, ins.arg_0, ins.arg_1, ins.arg_2);
+		stat = tlbread(proc, ins.arg_0, ins.arg_1, &ins.arg_2);
 #elif defined(MM_PAGING)
 		stat = pgread(proc, ins.arg_0, ins.arg_1, ins.arg_2);
 #else
