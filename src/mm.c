@@ -100,15 +100,19 @@ int vmap_page_range(struct pcb_t *caller, // process call
    *      in page table caller->mm->pgd[]
    */
 
-  
-
+  fpit = fpit->fp_next;
   /* Our group's code */
-  for(; pgit < pgnum; pgit++) {
-    caller->mm->pgd[pgit + pgn] = addr + PAGING_PAGESZ * pgit;
+  for(; pgit < pgnum; pgit++, fpit = fpit->fp_next) {    
+    pgn = PAGING_PGN(addr + pgit * PAGING_PAGESZ);
+    if(fpit) {
+      pte_set_fpn(&caller->mm->pgd[pgn], fpit->fpn);
+    }
     /* Tracking for later page replacement activities (if needed)
     * Enqueue new usage page */
-    enlist_pgn_node(&caller->mm->fifo_pgn, pgn+pgit);
+    enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
   }   
+
+  ret_rg->rg_end += (pgit - 1) * PAGING_PAGESZ;
   /* Our group's code */
 
   return 0;
@@ -124,20 +128,73 @@ int vmap_page_range(struct pcb_t *caller, // process call
 int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struct** frm_lst)
 {
   int pgit, fpn;
-  //struct framephy_struct *newfp_str;
-  
-  /* Our group's code */
-  *frm_lst = malloc(sizeof(struct framephy_struct));
-  /* Our group's code */
+  struct framephy_struct *newfp_str;  
 
   for(pgit = 0; pgit < req_pgnum; pgit++)
   {
     if(MEMPHY_get_freefp(caller->mram, &fpn) == 0)
-   {
-     
-   } else {  // ERROR CODE of obtaining somes but not enough frames
-   } 
- }
+    {
+      /* Our group's code */
+      newfp_str = (struct framephy_struct*)malloc(sizeof(struct framephy_struct));
+      newfp_str->fpn = fpn;
+      newfp_str->owner = caller->mm;
+
+      if(*frm_lst == NULL) {
+        *frm_lst = newfp_str;
+      } else {
+        newfp_str->fp_next = *frm_lst;
+        *frm_lst = newfp_str;
+      }
+
+      newfp_str->fp_next = caller->mram->used_fp_list;
+      caller->mram->used_fp_list = newfp_str;
+      /* Our group's code */
+    } else {  // ERROR CODE of obtaining somes but not enough frames
+      int vicfpn, vicpgn, vicpte;
+      int swpfpn = -1;
+
+      if(find_victim_page(caller->mm, &vicpgn) < 0) {
+        return -1;
+      }
+      vicpte = caller->mm->pgd[vicpgn];
+      vicfpn = PAGING_FPN(vicpte);
+
+      newfp_str = (struct framphy_struct*)malloc(sizeof(struct framephy_struct));
+      newfp_str->fpn = vicfpn;
+      newfp_str->owner = caller->mm;
+
+      if(*frm_lst == NULL) {
+        *frm_lst = newfp_str;
+      } else {
+        newfp_str->fp_next = *frm_lst;
+        *frm_lst = newfp_str;
+      }
+
+      int i;
+      if(MEMPHY_get_freefp(caller->active_mswp, &swpfpn) == 0) {
+        __swap_cp_page(caller->mram, vicfpn, caller->active_mswp, swpfpn);
+        for(i = 0; i < PAGING_MAX_MMSWP; i++) {
+          if(caller->active_mswp == caller->mswp[i]) {
+            break;
+          }
+        }
+      } else {
+        swpfpn = -01;
+        for(i = 0; i < PAGING_MAX_MMSWP; i ++) {
+          if(MEMPHY_get_freefp(caller->mswp[i], &swpfpn) == 0) {
+            __swap_cp_page(caller->mram, vicfpn, caller->mswp[i], swpfpn);
+            break;
+          }
+        }
+      }
+
+      if(swpfpn == -1) {
+        return -1;
+      }
+
+      pte_set_swap(&caller->mm->pgd[vicpgn], i, swpfpn);
+    } 
+  }
 
   return 0;
 }

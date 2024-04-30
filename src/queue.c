@@ -11,13 +11,17 @@ void enqueue(struct queue_t * q, struct pcb_t * proc) {
         /* TODO: put a new process to queue [q] */
         
         /* Our group's code */
-        if(q->size == MAX_QUEUE_SIZE) {
+        if(q->size >= MAX_QUEUE_SIZE) {
+                printf("Queue is full!\n");
                 return;
         }
 
-        q->proc[q->size] = proc;
+        int prio_position, i;
+        for(prio_position = 0; prio_position < q->size && q->proc[prio_position]->prio <= proc->prio; prio_position++);
+        for(i = q->size; i > prio_position; q->proc[i] = q->proc[i - 1], i--);
+
+        q->proc[prio_position] = proc;
         q->size++;
-        return;
         /* Our group's code */
 }
 
@@ -27,15 +31,14 @@ struct pcb_t * dequeue(struct queue_t * q) {
          * */
 
         /* Our group's code */
-        if(empty(q)) return NULL;
-        struct pcb_t * highest_pcb_priority = q->proc[0];
-
-        for(int i = 0; i + 1 < q->size; i ++) {
-                q->proc[i] = q->proc[i + 1];
+        if(!q || empty(q)) {
+                printf("Queue is empty!\n");
+                return NULL;
         }
 
+        struct pcb_t *highest_pcb_priority = q->proc[0];
+        for(int i = 0; i + 1 < q->size; q->proc[i] = q->proc[i + 1], i ++);
         q->size--;
-
 	return highest_pcb_priority;
         /* Our group's code */
 }

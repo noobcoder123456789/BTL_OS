@@ -186,11 +186,11 @@ static void read_config(const char * path) {
 	 *        MEM_RAM_SZ MEM_SWP0_SZ MEM_SWP1_SZ MEM_SWP2_SZ MEM_SWP3_SZ
 	*/
 	
-	fscanf(file, "%d\n", &memramsz);
-	for(sit = 0; sit < PAGING_MAX_MMSWP; sit++)
-		fscanf(file, "%d", &(memswpsz[sit])); 
+	// fscanf(file, "%d\n", &memramsz);
+	// for(sit = 0; sit < PAGING_MAX_MMSWP; sit++)
+	// 	fscanf(file, "%d", &(memswpsz[sit])); 
 
-	fscanf(file, "\n"); /* Final character */
+	// fscanf(file, "\n"); /* Final character */
 #endif
 #endif
 

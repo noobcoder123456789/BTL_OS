@@ -49,7 +49,8 @@ struct mm_struct {
    uint32_t *pgd;
 
    /* Our group's code */
-   int pgd_size;
+   int tlb_size;
+   uint32_t *tlbpgd;
    uint32_t *pidd; /* pidd is an array which store pid */
    uint32_t *frmnumd; /* frame number's array in TLB */
    /* Our group's code */
@@ -86,6 +87,9 @@ struct memphy_struct {
    /* Management structure */
    struct framephy_struct *free_fp_list;
    struct framephy_struct *used_fp_list;
+   
+   /* Our group's code */
+   struct framephy_struct *tlb_fp_list;
 };
 
 #endif
