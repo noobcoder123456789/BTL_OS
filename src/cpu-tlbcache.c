@@ -6,7 +6,7 @@
  * a personal to use and modify the Licensed Source Code for 
  * the sole purpose of studying during attending the course CO2018.
  */
-//#ifdef MM_TLB
+
 /*
  * Memory physical based TLB Cache
  * TLB cache module tlb/tlbcache.c
@@ -16,10 +16,11 @@
  * and runs at high speed
  */
 
-
+#include "os-cfg.h"
 #include "mm.h"
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef CPU_TLB
 
 #define init_tlbcache(mp,sz,...) init_memphy(mp, sz, (1, ##__VA_ARGS__))
 
@@ -39,7 +40,7 @@
  *    + 
 */
 
-int tlb_cache_read(struct memphy_struct * mp, int pid, int pgnum, int *value)
+int tlb_cache_read(struct memphy_struct * mp, int pid, int pgnum, BYTE *value, int *frmnum)
 {
    /* TODO: the identify info is mapped to 
     *      cache line by employing:
@@ -47,21 +48,21 @@ int tlb_cache_read(struct memphy_struct * mp, int pid, int pgnum, int *value)
     */
 
    /* Our group's code */
-   /* We implement direct mapping technique for mapping */
-   if(!mp) return -1;   
-
-   int TLB_SIZE = mp->tlb_fp_list->owner->tlb_size;
-   if(mp->tlb_fp_list->owner->tlbpgd[pgnum % TLB_SIZE] == pgnum
-   && mp->tlb_fp_list->owner->pidd[pgnum % TLB_SIZE] == pid) {
-      /* If TLB hit */
-      *value = mp->tlb_fp_list->owner->frmnumd[pgnum % TLB_SIZE];
-      return 0;
+   if(!mp || pgnum < 0) {
+      return -1;
    }
 
-   *value = -1;
-   /* Our group's code */
+   *value = *frmnum = -1;
+   int TLB_SIZE = mp->maxsz;
+   if(mp->TLB[pgnum % TLB_SIZE].TLB_pid == pid
+   && mp->TLB[pgnum % TLB_SIZE].TLB_pgn == pgnum) {
+      *frmnum = mp->TLB[pgnum % TLB_SIZE].TLB_fpn;
+      TLBMEMPHY_read(mp, pgnum % TLB_SIZE, value);
+      return 0;
+   }   
 
-   return 0;
+   return -1;
+   /* Our group's code */
 }
 
 /*
@@ -71,7 +72,7 @@ int tlb_cache_read(struct memphy_struct * mp, int pid, int pgnum, int *value)
  *  @pgnum: page number
  *  @value: obtained value
  */
-int tlb_cache_write(struct memphy_struct *mp, int pid, int pgnum, int value)
+int tlb_cache_write(struct memphy_struct *mp, int pid, int pgnum, BYTE *value, int *frmnum)
 {
    /* TODO: the identify info is mapped to 
     *      cache line by employing:
@@ -79,17 +80,21 @@ int tlb_cache_write(struct memphy_struct *mp, int pid, int pgnum, int value)
     */
 
    /* Our group's code */
-   /*
-    * tlb_cache_write will write pid and frame number into
-    * the pgnum % TLB_SIZE position
-   */
-   if(!mp) return -1;
+   if(!mp || pgnum < 0) {
+      return -1;
+   }
+
+   *frmnum = -1;
+   int TLB_SIZE = mp->maxsz;
+   if(mp->TLB[pgnum % TLB_SIZE].TLB_pid == pid
+   && mp->TLB[pgnum % TLB_SIZE].TLB_pgn == pgnum) {
+      *frmnum = mp->TLB[pgnum % TLB_SIZE].TLB_fpn;
+      TLBMEMPHY_write(mp, pgnum % TLB_SIZE, *value);
+      return 0;
+   }   
    
-   int TLB_SIZE = mp->tlb_fp_list->owner->tlb_size;
-   mp->tlb_fp_list->owner->frmnumd[pgnum % TLB_SIZE] = value;
-   mp->tlb_fp_list->owner->pidd[pgnum % TLB_SIZE] = pid;   
+   return -1;
    /* Our group's code */
-   return 0;
 }
 
 /*
@@ -162,40 +167,14 @@ int init_tlbmemphy(struct memphy_struct *mp, int max_size)
    mp->maxsz = max_size;
 
    // /* Our group's code */
-   // mp->tlb_fp_list->owner->tlb_size = max_size;
-   // mp->tlb_fp_list->owner->tlbpgd = malloc(max_size*sizeof(uint32_t));
-   // mp->tlb_fp_list->owner->pidd = malloc(max_size*sizeof(uint32_t));
-   // mp->tlb_fp_list->owner->frmnumd = malloc(max_size*sizeof(uint32_t));   
-
-   // int iter = 0;
-   // for(; iter < max_size; iter ++) {
-   //    mp->tlb_fp_list->owner->tlbpgd[iter] = -1;
-   //    mp->tlb_fp_list->owner->pidd[iter] = -1;
-   //    mp->tlb_fp_list->owner->frmnumd[iter] = -1;
-   // }
-
-   // /* This setting come with fixed constant PAGESZ */
-   // int numfp = max_size;
-   // struct framephy_struct *newfst, *fst;   
-
-   // if (numfp <= 0) {
-   //    return -1;
-   // }
-
-   // /* Init head of free framephy list */ 
-   // fst = malloc(sizeof(struct framephy_struct));
-   // fst->fpn = 0;
-   // mp->tlb_fp_list = fst;
-
-   // /* We have list with first element, fill in the rest num-1 element member*/
-   // for (iter = 1; iter < numfp ; iter++)
-   // {
-   //    newfst =  malloc(sizeof(struct framephy_struct));
-   //    newfst->fpn = iter;
-   //    newfst->fp_next = NULL;
-   //    fst->fp_next = newfst;
-   //    fst = newfst;
-   // }
+   mp->TLB = (struct tlb_property_struct *)malloc(max_size * sizeof(struct tlb_property_struct));
+   for(int i = 0; i < max_size; i ++) {
+      mp->TLB[i].TLB_pid = 
+      mp->TLB[i].TLB_fpn = 
+      mp->TLB[i].TLB_pgn = 
+      mp->storage[i] = -1;
+   }
+   // mp->TLB_entry = (int*)malloc(max_size*sizeof(int));
    // /* Our group's code */
 
    mp->rdmflg = 1;
@@ -203,4 +182,4 @@ int init_tlbmemphy(struct memphy_struct *mp, int max_size)
    return 0;
 }
 
-//#endif
+#endif

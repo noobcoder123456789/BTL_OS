@@ -6,15 +6,17 @@
  * a personal to use and modify the Licensed Source Code for 
  * the sole purpose of studying during attending the course CO2018.
  */
-//#ifdef CPU_TLB
+
 /*
  * CPU TLB
  * TLB module cpu/cpu-tlb.c
  */
- 
+
+#include "os-cfg.h"
 #include "mm.h"
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef CPU_TLB
 
 int tlb_change_all_page_tables_of(struct pcb_t *proc,  struct memphy_struct * mp)
 {
@@ -27,23 +29,8 @@ int tlb_change_all_page_tables_of(struct pcb_t *proc,  struct memphy_struct * mp
     return -1;
   }
 
-  int i;
-  for(i = 0; i < (1 << FIRST_LV_LEN); i ++) {
-    if(!proc->page_table->table[i].next_lv) {
-      continue;
-    }
-
-    int j;
-    for(j = 0; j < (1 << SECOND_LV_LEN); j++) {
-      /* assign the virtual index at first layer to all second layer member*/
-      proc->page_table->table[i].next_lv->table[j].v_index = proc->page_table->table[i].v_index;
-    }
-  }
-
-  tlb_flush_tlb_of(proc, mp);
+  return tlb_flush_tlb_of(proc, mp);
   /* Our group's code */
-  
-  return 0;
 }
 
 int tlb_flush_tlb_of(struct pcb_t *proc, struct memphy_struct * mp)
@@ -51,20 +38,18 @@ int tlb_flush_tlb_of(struct pcb_t *proc, struct memphy_struct * mp)
   /* TODO flush tlb cached*/
 
   /* Our group's code */
-  if(!proc || !proc->tlb) {
+  if(!proc || !mp) {
     return -1;
   }
 
-  mp = proc->tlb;
-
-  int i;
-  for(i = 0; i < mp->tlb_fp_list->owner->tlb_size; i ++) {
-    mp->tlb_fp_list->owner->tlbpgd[i] = -1;
-    mp->tlb_fp_list->owner->pidd[i] = -1;
-    mp->tlb_fp_list->owner->frmnumd[i] = -1;
-  }
+	int TLB_SIZE = mp->maxsz;
+  for(int i = 0; i < TLB_SIZE; i ++) {
+		// mp->TLB[i].TLB_pid = 
+		// mp->TLB[i].TLB_fpn = 
+		// mp->TLB[i].TLB_pgn = 
+		// mp->storage[i] = -1;
+	}
   /* Our group's code */
-
   return 0;
 }
 
@@ -77,6 +62,12 @@ int tlballoc(struct pcb_t *proc, uint32_t size, uint32_t reg_index)
 {
   int addr, val;
 
+  /* Our group's code */
+  if(!proc) {
+    return -1;
+  }
+  /* Our group's code */
+
   /* By default using vmaid = 0 */
   val = __alloc(proc, 0, reg_index, size, &addr);
 
@@ -84,16 +75,23 @@ int tlballoc(struct pcb_t *proc, uint32_t size, uint32_t reg_index)
   /* by using tlb_cache_read()/tlb_cache_write()*/
 
   /* Our group's code */
-  if(val + 1 == 0) {
-    return val;
-  }
-  
-  /* If alloc succeed then we put it into TLB */
-  int TLB_SIZE = proc->tlb->tlb_fp_list->owner->tlb_size;
   int pgn = PAGING_PGN(addr);
-  int fpn = PAGING_FPN(proc->tlb->tlb_fp_list->owner->tlbpgd[pgn % TLB_SIZE]);
-  if(tlb_cache_write(proc->tlb, proc->pid, pgn, fpn) < 0) {
-    return -1;
+  int pgnum = PAGING_PAGE_ALIGNSZ(size) / PAGING_PAGESZ;
+  int TLB_SIZE = proc->tlb->maxsz;
+
+  for(int i = 0; i < pgnum; i ++) {
+    uint32_t pte = proc->mm->pgd[i + pgn];
+    int fpn = PAGING_FPN_GROUPS_MODIFY(pte);
+    proc->tlb->TLB[(i + pgn) % TLB_SIZE].TLB_pid = proc->pid;
+    proc->tlb->TLB[(i + pgn) % TLB_SIZE].TLB_pgn = i + pgn;
+    proc->tlb->TLB[(i + pgn) % TLB_SIZE].TLB_fpn = fpn;
+	
+	BYTE data_tmp;
+	int off_tmp = PAGING_OFFST(addr);
+	int phyaddr = (fpn << PAGING_ADDR_FPN_LOBIT) + off_tmp;
+	MEMPHY_read(proc->mram, phyaddr, &data_tmp);
+	proc->tlb->storage[(i + pgn) % TLB_SIZE] = data_tmp;
+  // proc->tlb->TLB[(i + pgn) % TLB_SIZE].storage = data_tmp;
   }
   /* Our group's code */
 
@@ -107,24 +105,33 @@ int tlballoc(struct pcb_t *proc, uint32_t size, uint32_t reg_index)
  */
 int tlbfree_data(struct pcb_t *proc, uint32_t reg_index)
 {
+  /* Our group's code */
+  if(!proc) {
+    return -1;
+  }
+  /* Our group's code */
+
   __free(proc, 0, reg_index);
 
   /* TODO update TLB CACHED frame num of freed page(s)*/
   /* by using tlb_cache_read()/tlb_cache_write()*/
-
+  
   /* Our group's code */
-  int frmnum = -1;
-  int TLB_SIZE = proc->tlb->tlb_fp_list->owner->tlb_size;
-  struct vm_rg_struct *currg = get_symrg_byid(proc->tlb->tlb_fp_list->owner, reg_index);
-  int addr = currg->rg_start;
-  int pgn = PAGING_PGN(addr);
-  tlb_cache_read(proc->tlb, proc->pid, pgn, &frmnum);
+  int rg_start = proc->mm->symrgtbl[reg_index].rg_start;
+  int rg_end = proc->mm->symrgtbl[reg_index].rg_end;
+  int size = rg_end - rg_start;
+  int pgn = PAGING_PGN(rg_start);
+  int pgnum = PAGING_PAGE_ALIGNSZ(size) / PAGING_PAGESZ;
+  int TLB_SIZE = proc->tlb->maxsz;
 
-  if(frmnum != -1) {
-    /* If TLB hit then free that TLB entry */
-    proc->tlb->tlb_fp_list->owner->frmnumd[pgn % TLB_SIZE] = -1;
-    proc->tlb->tlb_fp_list->owner->pidd[pgn % TLB_SIZE] = -1;
-    proc->tlb->tlb_fp_list->owner->tlbpgd[pgn % TLB_SIZE] = -1;
+  for(int i = 0; i < pgnum; i ++) {
+    if(proc->tlb->TLB[(i + pgn) % TLB_SIZE].TLB_pid == proc->pid
+    && proc->tlb->TLB[(i + pgn) % TLB_SIZE].TLB_pgn == i + pgn) {
+      proc->tlb->TLB[(i + pgn) % TLB_SIZE].TLB_pid = 
+      proc->tlb->TLB[(i + pgn) % TLB_SIZE].TLB_pgn = 
+      proc->tlb->TLB[(i + pgn) % TLB_SIZE].TLB_fpn =
+	  	proc->tlb->storage[(i + pgn) % TLB_SIZE] = -1;
+    }    
   }
   /* Our group's code */
 
@@ -147,20 +154,19 @@ int tlbread(struct pcb_t * proc, uint32_t source,
    * reading the TLB cache
    */
   BYTE data;
-  int frmnum = -1;
+  int frmnum;
 	
   /* TODO retrieve TLB CACHED frame num of accessing page(s)*/
   /* by using tlb_cache_read()/tlb_cache_write()*/
   /* frmnum is return value of tlb_cache_read/write value*/
 
-  /* Our group's code */
-  /* hình như source là region id */
-  int TLB_SIZE = proc->tlb->tlb_fp_list->owner->tlb_size;
-  struct vm_rg_struct *currg = get_symrg_byid(proc->tlb->tlb_fp_list->owner, source);
+	/* Our group's code */
+  struct vm_rg_struct *currg = get_symrg_byid(proc->mm, source);
   int addr = currg->rg_start + offset;
   int pgn = PAGING_PGN(addr);
-  tlb_cache_read(proc->tlb, proc->pid, pgn, &frmnum);
-  /* Our group's code */
+
+  tlb_cache_read(proc->tlb, proc->pid, pgn, &data, &frmnum);
+	/* Our group's code */
 	
 #ifdef IODUMP
   if (frmnum >= 0)
@@ -175,26 +181,33 @@ int tlbread(struct pcb_t * proc, uint32_t source,
   MEMPHY_dump(proc->mram);
 #endif
 
-  int val = __read(proc, 0, source, offset, &data);
+	/* Our group's code */
+  int val;
+  if(frmnum >= 0) {
+		val = 0;
+  } else {
+		val = __read(proc, 0, source, offset, &data);
+  }  
+	/* Our group's code */
 
   *destination = (uint32_t) data;
 
   /* TODO update TLB CACHED with frame num of recent accessing page(s)*/
   /* by using tlb_cache_read()/tlb_cache_write()*/
 
-  /* Our group's code */
-  if(frmnum < 0) {
-    /* 
-     * If the frame num of recent accessing page(s) is not present in TLB 
-     * then put it in TLB by direct mapping technique
-     */    
-
-    if(pg_getpage(proc->mm, pgn, &frmnum, proc) != 0) {
-      /* Get the page to MEMRAM, swap from MEMSWAP if needed */
-      return -1; /* invalid page access */
-    }      
-  }
-  /* Our group's code */
+	/* Our group's code */
+	/*
+	 * if frmnum < 0 then update that page to TLB
+	 * else no need to update
+	*/
+	if(frmnum < 0) {
+		int TLB_SIZE = proc->tlb->maxsz;
+		proc->tlb->TLB[pgn % TLB_SIZE].TLB_pid = proc->pid;
+		proc->tlb->TLB[pgn % TLB_SIZE].TLB_pgn = pgn;
+		proc->tlb->TLB[pgn % TLB_SIZE].TLB_fpn = frmnum;
+		proc->tlb->storage[pgn % TLB_SIZE] = data;
+	}	
+	/* Our group's code */
 
   return val;
 }
@@ -214,13 +227,13 @@ int tlbwrite(struct pcb_t * proc, BYTE data,
   /* by using tlb_cache_read()/tlb_cache_write()
   frmnum is return value of tlb_cache_read/write value*/
 
-  /* Our group's code */
-  int TLB_SIZE = proc->tlb->tlb_fp_list->owner->tlb_size;
-  struct vm_rg_struct *currg = get_symrg_byid(proc->tlb->tlb_fp_list->owner, destination);
+	/* Our group's code */
+  struct vm_rg_struct *currg = get_symrg_byid(proc->mm, destination);
   int addr = currg->rg_start + offset;
   int pgn = PAGING_PGN(addr);
-  tlb_cache_read(proc->tlb, proc->pid, pgn, &frmnum);
-  /* Our group's code */
+
+  tlb_cache_write(proc->tlb, proc->pid, pgn, &data, &frmnum);
+	/* Our group's code */
 
 #ifdef IODUMP
   if (frmnum >= 0)
@@ -235,30 +248,26 @@ int tlbwrite(struct pcb_t * proc, BYTE data,
   MEMPHY_dump(proc->mram);
 #endif
 
-  val = __write(proc, 0, destination, offset, data);
+	if(frmnum < 0) {
+		val = __write(proc, 0, destination, offset, data);
+	} else {
+		val = 0;
+	}
 
   /* TODO update TLB CACHED with frame num of recent accessing page(s)*/
   /* by using tlb_cache_read()/tlb_cache_write()*/
 
-  /* Our group's code */
-  if(frmnum < 0) {
-    /* 
-     * If the frame num of recent accessing page(s) is not present in TLB 
-     * then put it in TLB by direct mapping technique
-     */    
-
-    if(pg_getpage(proc->mm, pgn, &frmnum, proc) != 0) {
-      /* Get the page to MEMRAM, swap from MEMSWAP if needed */
-      return -1; /* invalid page access */
-    }  
-
-    proc->tlb->tlb_fp_list->owner->pidd[destination % TLB_SIZE] = proc->pid;
-    proc->tlb->tlb_fp_list->owner->tlbpgd[destination % TLB_SIZE] = pgn;
-    proc->tlb->tlb_fp_list->owner->frmnumd[destination % TLB_SIZE] = frmnum;
-  }
-  /* Our group's code */
+	/* Our group's code */
+	if(frmnum < 0) {
+		int TLB_SIZE = proc->tlb->maxsz;
+		proc->tlb->TLB[pgn % TLB_SIZE].TLB_pid = proc->pid;
+		proc->tlb->TLB[pgn % TLB_SIZE].TLB_pgn = pgn;
+		proc->tlb->TLB[pgn % TLB_SIZE].TLB_fpn = frmnum;
+		proc->tlb->storage[pgn % TLB_SIZE] = data;
+	}	
+	/* Our group's code */
 
   return val;
 }
 
-//#endif
+#endif

@@ -168,17 +168,17 @@ int MEMPHY_dump(struct memphy_struct * mp)
       return -1;
    }
 
-   char memory_content[256];
-   char c[256];
-   strcpy(memory_content, "Memory content [pos, content]: ");
+   // char memory_content[256];
+   // char c[256];
+   // strcpy(memory_content, "Memory content [pos, content]: ");
    int i;
    for(i = 0; i < mp->maxsz; i ++) {
       if(mp->storage[i] == (char)0) continue;
-      sprintf(c, "[%d, %d]", i, mp->storage[i]);
-      strcat(memory_content, c);
+      // sprintf(c, "[%d, %d]", i, mp->storage[i]);
+      // strcat(memory_content, c);
    }
-   strcat(memory_content, "\n\0");
-   printf("%s\n", memory_content);
+   // strcat(memory_content, "\n\0");
+   // printf("%s\n", memory_content);
    /* Our group's code */
 
    return 0;
@@ -196,7 +196,6 @@ int MEMPHY_put_freefp(struct memphy_struct *mp, int fpn)
 
    return 0;
 }
-
 
 /*
  *  Init MEMPHY struct

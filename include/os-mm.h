@@ -6,8 +6,8 @@
 #define PAGING_MAX_SYMTBL_SZ 30
 
 typedef char BYTE;
+typedef unsigned int uint32_t;
 typedef uint32_t addr_t;
-//typedef unsigned int uint32_t;
 
 struct pgn_t{
    int pgn;
@@ -48,13 +48,6 @@ struct vm_area_struct {
 struct mm_struct {
    uint32_t *pgd;
 
-   /* Our group's code */
-   int tlb_size;
-   uint32_t *tlbpgd;
-   uint32_t *pidd; /* pidd is an array which store pid */
-   uint32_t *frmnumd; /* frame number's array in TLB */
-   /* Our group's code */
-
    struct vm_area_struct *mmap;
 
    /* Currently we support a fixed number of symbol */
@@ -75,6 +68,16 @@ struct framephy_struct {
    struct mm_struct* owner;
 };
 
+/*
+ * Our group's TLB's property struct
+*/
+struct tlb_property_struct {
+   /* Our group's TLB's properties */
+   int TLB_pid;
+   int TLB_pgn;
+   int TLB_fpn;
+};
+
 struct memphy_struct {
    /* Basic field of data and size */
    BYTE *storage;
@@ -84,12 +87,13 @@ struct memphy_struct {
    int rdmflg;
    int cursor;
 
+   /* Our group's code */
+   struct tlb_property_struct *TLB; 
+   /* Our group's code */
+
    /* Management structure */
    struct framephy_struct *free_fp_list;
    struct framephy_struct *used_fp_list;
-   
-   /* Our group's code */
-   struct framephy_struct *tlb_fp_list;
 };
 
 #endif

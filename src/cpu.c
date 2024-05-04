@@ -2,6 +2,7 @@
 #include "cpu.h"
 #include "mem.h"
 #include "mm.h"
+#include <stdio.h>
 
 int calc(struct pcb_t * proc) {
 	return ((unsigned long)proc & 0UL);
@@ -71,7 +72,7 @@ int run(struct pcb_t * proc) {
 #ifdef CPU_TLB
 		stat = tlbfree_data(proc, ins.arg_0);
 #elif defined(MM_PAGING)
-		stat = pgfree_data(proc, ins.arg_0);
+		stat = pgfree_data(proc, ins.arg_0);		
 #else
 		stat = free_data(proc, ins.arg_0);
 #endif

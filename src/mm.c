@@ -7,6 +7,9 @@
 #include "mm.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <pthread.h>
+
+pthread_mutex_t mtx_lock;
 
 /* 
  * init_pte - Initialize PTE entry
@@ -61,7 +64,7 @@ int pte_set_swap(uint32_t *pte, int swptyp, int swpoff)
 }
 
 /* 
- * pte_set_swap - Set PTE entry for on-line page
+ * pte_set_fpn - Set PTE entry for on-line page
  * @pte   : target page table entry (PTE)
  * @fpn   : frame page number (FPN)
  */
@@ -75,7 +78,6 @@ int pte_set_fpn(uint32_t *pte, int fpn)
   return 0;
 }
 
-
 /* 
  * vmap_page_range - map a range of page at aligned address
  */
@@ -84,7 +86,7 @@ int vmap_page_range(struct pcb_t *caller, // process call
                                int pgnum, // num of mapping page
            struct framephy_struct *frames,// list of the mapped frames
               struct vm_rg_struct *ret_rg)// return mapped region, the real mapped fp
-{                                         // no guarantee all given pages are mapped
+{                                         // no guarantee all given pages are mapped  
   //uint32_t * pte = malloc(sizeof(uint32_t));
   struct framephy_struct *fpit = malloc(sizeof(struct framephy_struct));
   //int  fpn;
@@ -99,20 +101,23 @@ int vmap_page_range(struct pcb_t *caller, // process call
    *      [addr to addr + pgnum*PAGING_PAGESZ
    *      in page table caller->mm->pgd[]
    */
-
-  fpit = fpit->fp_next;
+  
   /* Our group's code */
-  for(; pgit < pgnum; pgit++, fpit = fpit->fp_next) {    
-    pgn = PAGING_PGN(addr + pgit * PAGING_PAGESZ);
+  for(int temp = 0; temp <= pgn; temp++, fpit = fpit->fp_next);
+  for(pgit = pgnum - 1; pgit >= 0; pgit--, fpit = fpit->fp_next) {
+    pgn = PAGING_PGN((addr + pgit * PAGING_PAGESZ));
     if(fpit) {
       pte_set_fpn(&caller->mm->pgd[pgn], fpit->fpn);
     }
+
     /* Tracking for later page replacement activities (if needed)
     * Enqueue new usage page */
+    pthread_mutex_lock(&mtx_lock);
     enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
-  }   
+    pthread_mutex_unlock(&mtx_lock);
+  }
 
-  ret_rg->rg_end += (pgit - 1) * PAGING_PAGESZ;
+  ret_rg->rg_end += (pgit /*- 1*/) * PAGING_PAGESZ;
   /* Our group's code */
 
   return 0;
@@ -127,47 +132,54 @@ int vmap_page_range(struct pcb_t *caller, // process call
 
 int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struct** frm_lst)
 {
+  pthread_mutex_lock(&mtx_lock);
   int pgit, fpn;
-  struct framephy_struct *newfp_str;  
+  struct framephy_struct *newfp;
 
   for(pgit = 0; pgit < req_pgnum; pgit++)
   {
     if(MEMPHY_get_freefp(caller->mram, &fpn) == 0)
     {
       /* Our group's code */
-      newfp_str = (struct framephy_struct*)malloc(sizeof(struct framephy_struct));
-      newfp_str->fpn = fpn;
-      newfp_str->owner = caller->mm;
+      newfp = (struct framephy_struct*)malloc(sizeof(struct framephy_struct));
+      newfp->fpn = fpn;
+      newfp->owner = caller->mm;
 
       if(*frm_lst == NULL) {
-        *frm_lst = newfp_str;
+        *frm_lst = newfp;
       } else {
-        newfp_str->fp_next = *frm_lst;
-        *frm_lst = newfp_str;
+        newfp->fp_next = *frm_lst;
+        *frm_lst = newfp;
       }
 
-      newfp_str->fp_next = caller->mram->used_fp_list;
-      caller->mram->used_fp_list = newfp_str;
+      newfp->fp_next = caller->mram->free_fp_list;
+      caller->mram->free_fp_list = newfp;
       /* Our group's code */
     } else {  // ERROR CODE of obtaining somes but not enough frames
       int vicfpn, vicpgn, vicpte;
       int swpfpn = -1;
 
-      if(find_victim_page(caller->mm, &vicpgn) < 0) {
+      if(find_victim_page(caller->mm, &vicpgn) < 0) {        
+        struct framephy_struct *frm_list_it = *frm_lst;
+        for(; frm_list_it; frm_list_it = frm_list_it->fp_next) {
+          MEMPHY_put_freefp(caller->mram, frm_list_it->fpn);
+        }
+
         return -1;
       }
+      
       vicpte = caller->mm->pgd[vicpgn];
-      vicfpn = PAGING_FPN(vicpte);
+      vicfpn = PAGING_FPN_GROUPS_MODIFY(vicpte);
 
-      newfp_str = (struct framphy_struct*)malloc(sizeof(struct framephy_struct));
-      newfp_str->fpn = vicfpn;
-      newfp_str->owner = caller->mm;
-
+      newfp = (struct framephy_struct*)malloc(sizeof(struct framephy_struct));
+      newfp->fpn = vicfpn;
+      newfp->owner = caller->mm;
+      
       if(*frm_lst == NULL) {
-        *frm_lst = newfp_str;
+        *frm_lst = newfp;
       } else {
-        newfp_str->fp_next = *frm_lst;
-        *frm_lst = newfp_str;
+        newfp->fp_next = *frm_lst;
+        *frm_lst = newfp;
       }
 
       int i;
@@ -177,9 +189,9 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
           if(caller->active_mswp == caller->mswp[i]) {
             break;
           }
-        }
+        }        
       } else {
-        swpfpn = -01;
+        swpfpn = -1;
         for(i = 0; i < PAGING_MAX_MMSWP; i ++) {
           if(MEMPHY_get_freefp(caller->mswp[i], &swpfpn) == 0) {
             __swap_cp_page(caller->mram, vicfpn, caller->mswp[i], swpfpn);
@@ -189,6 +201,11 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
       }
 
       if(swpfpn == -1) {
+        struct framephy_struct *frm_list_it = *frm_lst;
+        for(; frm_list_it; frm_list_it = frm_list_it->fp_next) {
+          MEMPHY_put_freefp(caller->mram, frm_list_it->fpn);
+        }
+
         return -1;
       }
 
@@ -196,6 +213,7 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
     } 
   }
 
+  pthread_mutex_unlock(&mtx_lock);
   return 0;
 }
 
@@ -284,6 +302,9 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller)
   vma->sbrk = vma->vm_start;
   struct vm_rg_struct *first_rg = init_vm_rg(vma->vm_start, vma->vm_end);
   enlist_vm_rg_node(&vma->vm_freerg_list, first_rg);
+  /* Our group's code */
+  vma->vm_freerg_list = NULL;
+  /* Our group's code */
 
   vma->vm_next = NULL;
   vma->vm_mm = mm; /*point back to vma owner */

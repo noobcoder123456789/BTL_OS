@@ -12,7 +12,7 @@ void enqueue(struct queue_t * q, struct pcb_t * proc) {
         
         /* Our group's code */
         if(q->size >= MAX_QUEUE_SIZE) {
-                printf("Queue is full!\n");
+                // printf("Queue is full!\n");
                 return;
         }
 
@@ -32,7 +32,7 @@ struct pcb_t * dequeue(struct queue_t * q) {
 
         /* Our group's code */
         if(!q || empty(q)) {
-                printf("Queue is empty!\n");
+                // printf("Queue is empty!\n");
                 return NULL;
         }
 

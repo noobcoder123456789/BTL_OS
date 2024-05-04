@@ -85,7 +85,9 @@
 /* Extract SWAPFPN */
 #define PAGING_PGN(x)  GETVAL(x,PAGING_PGN_MASK,PAGING_ADDR_PGN_LOBIT)
 /* Extract SWAPTYPE */
-#define PAGING_FPN(x)  GETVAL(x,PAGING_FPN_MASK,PAGING_ADDR_FPN_LOBIT)
+#define PAGING_SWPTYP(x)  GETVAL(x,PAGING_PTE_SWPTYP_MASK, PAGING_PTE_SWPTYP_LOBIT)
+/* Extract FramePHY Number Group's Modify */
+#define PAGING_FPN_GROUPS_MODIFY(pte) (pte & 8191)
 
 /* Memory range operator */
 #define INCLUDE(x1,x2,y1,y2) (((y1-x1)*(x2-y2)>=0)?1:0)
@@ -126,8 +128,8 @@ int __write(struct pcb_t *caller, int vmaid, int rgid, int offset, BYTE value);
 int init_mm(struct mm_struct *mm, struct pcb_t *caller);
 
 /* Our group's code */
-int tlb_cache_read(struct memphy_struct * mp, int pid, int pgnum, int *value);
-int tlb_cache_write(struct memphy_struct *mp, int pid, int pgnum, int value);
+int tlb_cache_read(struct memphy_struct * mp, int pid, int pgnum, BYTE *value, int *frmnum);
+int tlb_cache_write(struct memphy_struct *mp, int pid, int pgnum, BYTE *value, int *frmnum);
 int TLBMEMPHY_read(struct memphy_struct * mp, int addr, BYTE *value);
 int TLBMEMPHY_write(struct memphy_struct * mp, int addr, BYTE data);
 int TLBMEMPHY_dump(struct memphy_struct * mp);
