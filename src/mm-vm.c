@@ -106,16 +106,16 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
 
   if (get_free_vmrg_area(caller, vmaid, PAGING_PAGE_ALIGNSZ(size), rgnode) == 0)
   {
-    int inc_amt = PAGING_PAGE_ALIGNSZ(size);
-    int incnumpage =  inc_amt / PAGING_PAGESZ;
+    // int inc_amt = PAGING_PAGE_ALIGNSZ(size);
+    // int incnumpage =  inc_amt / PAGING_PAGESZ;
     caller->mm->symrgtbl[rgid].rg_start = rgnode->rg_start;
     caller->mm->symrgtbl[rgid].rg_end = rgnode->rg_end;
     *alloc_addr = rgnode->rg_start;    
 
-    if (vm_map_ram(caller, rgnode->rg_start, rgnode->rg_end, 
-                    cur_vma->vm_end, incnumpage, rgnode) < 0) {
-                      return -1; /* Map the memory to MEMRAM */    
-                    }
+    // if (vm_map_ram(caller, rgnode->rg_start, rgnode->rg_end, 
+    //                 cur_vma->vm_end, incnumpage, rgnode) < 0) {
+    //                   return -1; /* Map the memory to MEMRAM */    
+    //                 }
 
     return 0;
   }
@@ -181,20 +181,24 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
   int page_end = PAGING_PGN(currg->rg_end);
 
   for(int i = page_end - 1; i >= page_start; i --) {
-    // uint32_t pte = caller->mm->pgd[i];
+    uint32_t pte = caller->mm->pgd[i];
     
     // int fpn = PAGING_FPN_GROUPS_MODIFY(pte);
     // MEMPHY_put_freefp(caller->mram, fpn);
-    init_pte(&caller->mm->pgd[i], 0, 0, 0, 0, 0, 0);
+    // init_pte(&caller->mm->pgd[i], 0, 0, 0, 0, 0, 0);
+    CLRBIT(pte, PAGING_PTE_PRESENT_MASK);
   }  
   
   if(currg == NULL || cur_vma == NULL) /* Invalid memory identify */
       return -1;
   /* Our group's code */
 
-  /*enlist the obsoleted memory region */
+  /*enlist the obsoleted memory region */  
+  enlist_vm_freerg_list(caller->mm, currg);
+  // int rg_start = caller->mm->symrgtbl[rgid].rg_start;
+  // int rg_end = caller->mm->symrgtbl[rgid].rg_end;
+  // caller->mm->mmap->sbrk -= (rg_end - rg_start);
   // currg->rg_start = currg->rg_end = 0;
-  enlist_vm_freerg_list(caller->mm, currg);  
   // currg->rg_next = NULL;
   
 #ifdef GROUP_DEBUG
@@ -246,7 +250,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
     uint32_t vicpte;
 
     int tgtfpn = PAGING_SWP(pte);//the target frame storing our variable
-    int tgtswptyp = PAGING_SWPTYP(pte);
+    // int tgtswptyp = PAGING_SWPTYP(pte);
 
     /* TODO: Play with your paging theory here */
     /* Find victim page */
@@ -283,16 +287,17 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
     }
 
     /* Copy target frame from swap to mem */
-    __swap_cp_page(*(caller->mswp + tgtswptyp), tgtfpn, caller->mram, vicfpn);
+    __swap_cp_page(caller->active_mswp, tgtfpn, caller->mram, vicfpn);
 
     /* Update page table */
     //pte_set_swap() &mm->pgd;
-    pte_set_swap(&caller->mm->pgd[vicpgn], i, swpfpn);
+    pte_set_swap(&caller->mm->pgd[vicpgn], 0, swpfpn);
     /* Our group's code */
 
     /* Update its online status of the target page */
     //pte_set_fpn() & mm->pgd[pgn];
-    pte_set_fpn(&caller->mm->pgd[pgn], vicfpn);
+    *fpn = PAGING_FPN_GROUPS_MODIFY(pte);
+    pte_set_fpn(&caller->mm->pgd[pgn], *fpn);
 
     enlist_pgn_node(&caller->mm->fifo_pgn,pgn);
     pte = caller->mm->pgd[pgn];
@@ -431,6 +436,7 @@ int pgwrite(
 		uint32_t destination, // Index of destination register
 		uint32_t offset)
 {
+  printf("PID: %d\n", proc->pid);
 #ifdef IODUMP
   printf("write region=%d offset=%d value=%d\n", destination, offset, data);
 #ifdef PAGETBL_DUMP

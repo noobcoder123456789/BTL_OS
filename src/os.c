@@ -59,9 +59,9 @@ static void * cpu_routine(void * args) {
 		 	* ready queue */
 			proc = get_proc();
 			if (proc == NULL) {
-                           next_slot(timer_id);
-                           continue; /* First load failed. skip dummy load */
-                        }
+				next_slot(timer_id);
+				continue; /* First load failed. skip dummy load */
+			}
 		}else if (proc->pc == proc->code->size) {
 			/* The porcess has finish it job */
 			printf("\tCPU %d: Processed %2d has finished\n",
@@ -228,8 +228,8 @@ int main(int argc, char * argv[]) {
 	char path[100];
 	path[0] = '\0';
 	strcat(path, "input/");
-	// strcat(path, argv[1]);
-	strcat(path, "os_0_mlq_paging");
+	strcat(path, argv[1]);
+	// strcat(path, "os_1_tlbsz_singleCPU_mlq");
 	read_config(path);
 
 	pthread_t * cpu = (pthread_t*)malloc(num_cpus * sizeof(pthread_t));

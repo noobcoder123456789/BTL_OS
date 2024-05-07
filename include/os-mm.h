@@ -63,6 +63,8 @@ struct mm_struct {
 struct framephy_struct { 
    int fpn;
    struct framephy_struct *fp_next;
+   
+   int used;
 
    /* Resereed for tracking allocated framed */
    struct mm_struct* owner;

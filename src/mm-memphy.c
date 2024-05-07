@@ -134,6 +134,8 @@ int MEMPHY_format(struct memphy_struct *mp, int pagesz)
        newfst->fp_next = NULL;
        fst->fp_next = newfst;
        fst = newfst;
+
+       newfst->used = 0;
     }
 
     return 0;

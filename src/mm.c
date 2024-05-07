@@ -95,29 +95,70 @@ int vmap_page_range(struct pcb_t *caller, // process call
 
   ret_rg->rg_end = ret_rg->rg_start = addr; // at least the very first space is usable
 
-  fpit->fp_next = frames;
+  // fpit->fp_next = frames;
 
   /* TODO map range of frame to address space 
    *      [addr to addr + pgnum*PAGING_PAGESZ
    *      in page table caller->mm->pgd[]
    */
   
-  /* Our group's code */
-  for(int temp = 0; temp <= pgn; temp++, fpit = fpit->fp_next);
-  for(pgit = pgnum - 1; pgit >= 0; pgit--, fpit = fpit->fp_next) {
+  /* Our group's code */  
+  fpit = frames;
+  // for(int temp = 0; temp <= pgn; temp++, fpit = fpit->fp_next);
+  for(pgit = pgnum - 1; pgit >= 0; pgit--) {
+    while(fpit && fpit->used == 1) fpit = fpit->fp_next;
+
+    if(!fpit) {      
+      struct framephy_struct *used_fp_list_it = caller->mram->used_fp_list;
+      while(used_fp_list_it 
+            && used_fp_list_it->fp_next 
+            && used_fp_list_it->fp_next->fp_next) {
+              used_fp_list_it = used_fp_list_it->fp_next;
+            }
+
+      int first_in_frame = -1;
+      if(!used_fp_list_it->fp_next) {
+        first_in_frame = used_fp_list_it->fpn;
+        free(used_fp_list_it);
+        used_fp_list_it = NULL;
+      } else {
+        struct framephy_struct *deleteNode = used_fp_list_it->fp_next;
+        used_fp_list_it->fp_next = NULL;
+        first_in_frame = deleteNode->fpn;
+        free(deleteNode);
+        deleteNode = NULL;
+      }
+
+      fpit = frames;
+      while(fpit && fpit->fpn != first_in_frame) {
+        fpit = fpit->fp_next;
+      }
+    }
+
     pgn = PAGING_PGN((addr + pgit * PAGING_PAGESZ));
-    if(fpit) {
+    if(fpit) { 
       pte_set_fpn(&caller->mm->pgd[pgn], fpit->fpn);
+      fpit->used = 1;
+
+      struct framephy_struct *newNode = (struct framephy_struct *)malloc(sizeof(struct framephy_struct));
+      newNode->fpn = fpit->fpn;
+      newNode->fp_next = NULL;      
+      if(!caller->mram->used_fp_list) {
+        caller->mram->used_fp_list = newNode;
+      } else {
+        newNode->fp_next = caller->mram->used_fp_list;
+        caller->mram->used_fp_list = newNode;
+      }
     }
 
     /* Tracking for later page replacement activities (if needed)
     * Enqueue new usage page */
-    pthread_mutex_lock(&mtx_lock);
+    // pthread_mutex_lock(&mtx_lock);
     enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
-    pthread_mutex_unlock(&mtx_lock);
+    // pthread_mutex_unlock(&mtx_lock);
   }
 
-  ret_rg->rg_end += (pgit /*- 1*/) * PAGING_PAGESZ;
+  ret_rg->rg_end += (pgnum) * PAGING_PAGESZ;
   /* Our group's code */
 
   return 0;
@@ -132,7 +173,7 @@ int vmap_page_range(struct pcb_t *caller, // process call
 
 int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struct** frm_lst)
 {
-  pthread_mutex_lock(&mtx_lock);
+  // pthread_mutex_lock(&mtx_lock);
   int pgit, fpn;
   struct framephy_struct *newfp;
 
@@ -206,14 +247,14 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
           MEMPHY_put_freefp(caller->mram, frm_list_it->fpn);
         }
 
-        return -1;
+        return -3000;
       }
 
       pte_set_swap(&caller->mm->pgd[vicpgn], i, swpfpn);
     } 
   }
 
-  pthread_mutex_unlock(&mtx_lock);
+  // pthread_mutex_unlock(&mtx_lock);
   return 0;
 }
 

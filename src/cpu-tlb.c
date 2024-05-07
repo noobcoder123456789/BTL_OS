@@ -44,10 +44,10 @@ int tlb_flush_tlb_of(struct pcb_t *proc, struct memphy_struct * mp)
 
 	int TLB_SIZE = mp->maxsz;
   for(int i = 0; i < TLB_SIZE; i ++) {
-		// mp->TLB[i].TLB_pid = 
-		// mp->TLB[i].TLB_fpn = 
-		// mp->TLB[i].TLB_pgn = 
-		// mp->storage[i] = -1;
+		mp->TLB[i].TLB_pid = 
+		mp->TLB[i].TLB_fpn = 
+		mp->TLB[i].TLB_pgn = 
+		mp->storage[i] = -1;
 	}
   /* Our group's code */
   return 0;
@@ -86,12 +86,12 @@ int tlballoc(struct pcb_t *proc, uint32_t size, uint32_t reg_index)
     proc->tlb->TLB[(i + pgn) % TLB_SIZE].TLB_pgn = i + pgn;
     proc->tlb->TLB[(i + pgn) % TLB_SIZE].TLB_fpn = fpn;
 	
-	BYTE data_tmp;
-	int off_tmp = PAGING_OFFST(addr);
-	int phyaddr = (fpn << PAGING_ADDR_FPN_LOBIT) + off_tmp;
-	MEMPHY_read(proc->mram, phyaddr, &data_tmp);
-	proc->tlb->storage[(i + pgn) % TLB_SIZE] = data_tmp;
-  // proc->tlb->TLB[(i + pgn) % TLB_SIZE].storage = data_tmp;
+    BYTE data_tmp;
+    int off_tmp = PAGING_OFFST(addr);
+    int phyaddr = (fpn << PAGING_ADDR_FPN_LOBIT) + off_tmp;
+    MEMPHY_read(proc->mram, phyaddr, &data_tmp);
+    proc->tlb->storage[(i + pgn) % TLB_SIZE] = data_tmp;
+    // proc->tlb->TLB[(i + pgn) % TLB_SIZE].storage = data_tmp;
   }
   /* Our group's code */
 
