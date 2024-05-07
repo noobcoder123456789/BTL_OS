@@ -6,12 +6,12 @@
 #define PAGING_MAX_SYMTBL_SZ 30
 
 typedef char BYTE;
+typedef unsigned int uint32_t;
 typedef uint32_t addr_t;
-//typedef unsigned int uint32_t;
 
 struct pgn_t{
    int pgn;
-   struct pgn_t *pg_next; 
+   struct pgn_t *pg_next;
 };
 
 /*
@@ -63,9 +63,21 @@ struct mm_struct {
 struct framephy_struct { 
    int fpn;
    struct framephy_struct *fp_next;
+   
+   int used;
 
    /* Resereed for tracking allocated framed */
    struct mm_struct* owner;
+};
+
+/*
+ * Our group's TLB's property struct
+*/
+struct tlb_property_struct {
+   /* Our group's TLB's properties */
+   int TLB_pid;
+   int TLB_pgn;
+   int TLB_fpn;
 };
 
 struct memphy_struct {
@@ -76,6 +88,10 @@ struct memphy_struct {
    /* Sequential device fields */ 
    int rdmflg;
    int cursor;
+
+   /* Our group's code */
+   struct tlb_property_struct *TLB; 
+   /* Our group's code */
 
    /* Management structure */
    struct framephy_struct *free_fp_list;

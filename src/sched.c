@@ -43,16 +43,19 @@ void init_scheduler(void) {
  *  State representation   prio = 0 .. MAX_PRIO, curr_slot = 0..(MAX_PRIO - prio)
  */
 struct pcb_t * get_mlq_proc(void) {
-	pthread_mutex_lock(&queue_lock);
-	struct pcb_t * proc = NULL;
 	/*TODO: get a process from PRIORITY [ready_queue].
 	 * Remember to use lock to protect the queue.
 	 */	
-	int i = 0;
-	for(; i < MAX_PRIO && empty(&mlq_ready_queue[i]); i ++);
+
+	/* Our group's code */
+	pthread_mutex_lock(&queue_lock);
+	struct pcb_t * proc = NULL;	
+	int i;
+	for(i = 0; i < MAX_PRIO && empty(&mlq_ready_queue[i]); i++);
 	proc = dequeue(&mlq_ready_queue[i]);
 	pthread_mutex_unlock(&queue_lock);
 	return proc;	
+	/* Our group's code */
 }
 
 void put_mlq_proc(struct pcb_t * proc) {
@@ -82,6 +85,7 @@ void add_proc(struct pcb_t * proc) {
 void finish_scheduler(void) {}
 #else
 struct pcb_t * get_proc(void) {
+	/* Our group's code */
 	pthread_mutex_lock(&queue_lock);
 	struct pcb_t * proc = NULL;
 	/*TODO: get a process from [ready_queue].
@@ -90,6 +94,7 @@ struct pcb_t * get_proc(void) {
 	proc = dequeue(&ready_queue);
 	pthread_mutex_unlock(&queue_lock);
 	return proc;
+	/* Our group's code */
 }
 
 void put_proc(struct pcb_t * proc) {

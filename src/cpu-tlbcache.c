@@ -6,7 +6,7 @@
  * a personal to use and modify the Licensed Source Code for 
  * the sole purpose of studying during attending the course CO2018.
  */
-//#ifdef MM_TLB
+
 /*
  * Memory physical based TLB Cache
  * TLB cache module tlb/tlbcache.c
@@ -16,9 +16,11 @@
  * and runs at high speed
  */
 
-
+#include "os-cfg.h"
 #include "mm.h"
 #include <stdlib.h>
+#include <stdio.h>
+#ifdef CPU_TLB
 
 #define init_tlbcache(mp,sz,...) init_memphy(mp, sz, (1, ##__VA_ARGS__))
 
@@ -29,13 +31,38 @@
  *  @pgnum: page number
  *  @value: obtained value
  */
-int tlb_cache_read(struct memphy_struct * mp, int pid, int pgnum, BYTE value)
+
+/* Groups' define memphy_struct TLB:
+ *    + maxsz will be the size of the TLB
+ *    + storage will be 
+ *    + rmdflg will always be 1
+ *    + tlb_fp_list->owner->tlbpgd[pgnum] = frmnum
+ *    + 
+*/
+
+int tlb_cache_read(struct memphy_struct * mp, int pid, int pgnum, BYTE *value, int *frmnum)
 {
    /* TODO: the identify info is mapped to 
     *      cache line by employing:
     *      direct mapped, associated mapping etc.
     */
-   return 0;
+
+   /* Our group's code */
+   if(!mp || pgnum < 0) {
+      return -1;
+   }
+
+   *value = *frmnum = -1;
+   int TLB_SIZE = mp->maxsz;
+   if(mp->TLB[pgnum % TLB_SIZE].TLB_pid == pid
+   && mp->TLB[pgnum % TLB_SIZE].TLB_pgn == pgnum) {
+      *frmnum = mp->TLB[pgnum % TLB_SIZE].TLB_fpn;
+      TLBMEMPHY_read(mp, pgnum % TLB_SIZE, value);
+      return 0;
+   }   
+
+   return -1;
+   /* Our group's code */
 }
 
 /*
@@ -45,13 +72,29 @@ int tlb_cache_read(struct memphy_struct * mp, int pid, int pgnum, BYTE value)
  *  @pgnum: page number
  *  @value: obtained value
  */
-int tlb_cache_write(struct memphy_struct *mp, int pid, int pgnum, BYTE value)
+int tlb_cache_write(struct memphy_struct *mp, int pid, int pgnum, BYTE *value, int *frmnum)
 {
    /* TODO: the identify info is mapped to 
     *      cache line by employing:
     *      direct mapped, associated mapping etc.
     */
-   return 0;
+
+   /* Our group's code */
+   if(!mp || pgnum < 0) {
+      return -1;
+   }
+
+   *frmnum = -1;
+   int TLB_SIZE = mp->maxsz;
+   if(mp->TLB[pgnum % TLB_SIZE].TLB_pid == pid
+   && mp->TLB[pgnum % TLB_SIZE].TLB_pgn == pgnum) {
+      *frmnum = mp->TLB[pgnum % TLB_SIZE].TLB_fpn;
+      TLBMEMPHY_write(mp, pgnum % TLB_SIZE, *value);
+      return 0;
+   }   
+   
+   return -1;
+   /* Our group's code */
 }
 
 /*
@@ -90,16 +133,26 @@ int TLBMEMPHY_write(struct memphy_struct * mp, int addr, BYTE data)
 }
 
 /*
- *  TLBMEMPHY_format natively supports MEMPHY device interfaces
- *  @mp: memphy struct
- */
-
-
+*  TLBMEMPHY_format natively supports MEMPHY device interfaces
+*  @mp: memphy struct
+*/
 int TLBMEMPHY_dump(struct memphy_struct * mp)
 {
    /*TODO dump memphy contnt mp->storage 
     *     for tracing the memory content
     */
+
+   /* Our group's code */
+   if(!mp || !mp->storage) {
+      return -1;
+   }
+
+   int i;
+   for(i = 0; i < mp->maxsz; i ++) {
+      printf("%c\n", mp->storage[i]);
+   }
+   printf("\n");
+   /* Our group's code */
 
    return 0;
 }
@@ -113,9 +166,20 @@ int init_tlbmemphy(struct memphy_struct *mp, int max_size)
    mp->storage = (BYTE *)malloc(max_size*sizeof(BYTE));
    mp->maxsz = max_size;
 
+   // /* Our group's code */
+   mp->TLB = (struct tlb_property_struct *)malloc(max_size * sizeof(struct tlb_property_struct));
+   for(int i = 0; i < max_size; i ++) {
+      mp->TLB[i].TLB_pid = 
+      mp->TLB[i].TLB_fpn = 
+      mp->TLB[i].TLB_pgn = 
+      mp->storage[i] = -1;
+   }
+   // mp->TLB_entry = (int*)malloc(max_size*sizeof(int));
+   // /* Our group's code */
+
    mp->rdmflg = 1;
 
    return 0;
 }
 
-//#endif
+#endif

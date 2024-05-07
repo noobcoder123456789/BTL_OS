@@ -85,11 +85,22 @@
 /* Extract SWAPFPN */
 #define PAGING_PGN(x)  GETVAL(x,PAGING_PGN_MASK,PAGING_ADDR_PGN_LOBIT)
 /* Extract SWAPTYPE */
-#define PAGING_FPN(x)  GETVAL(x,PAGING_FPN_MASK,PAGING_ADDR_FPN_LOBIT)
+#define PAGING_SWPTYP(x)  GETVAL(x,PAGING_PTE_SWPTYP_MASK, PAGING_PTE_SWPTYP_LOBIT)
+/* Extract FramePHY Number Group's Modify */
+#define PAGING_FPN_GROUPS_MODIFY(pte) (pte & 8191)
 
 /* Memory range operator */
 #define INCLUDE(x1,x2,y1,y2) (((y1-x1)*(x2-y2)>=0)?1:0)
 #define OVERLAP(x1,x2,y1,y2) (((y2-x1)*(x2-y1)>=0)?1:0)
+
+/* Our group's code */
+struct vm_area_struct *get_vma_by_num(struct mm_struct *mm, int vmaid);
+struct vm_rg_struct *get_symrg_byid(struct mm_struct *mm, int rgid);
+int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller);
+int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller);
+int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller);
+struct vm_rg_struct* get_vm_area_node_at_brk(struct pcb_t *caller, int vmaid, int size, int alignedsz);
+/* Our group's code */
 
 /* VM region prototypes */
 struct vm_rg_struct * init_vm_rg(int rg_start, int rg_endi);
@@ -116,12 +127,22 @@ int __read(struct pcb_t *caller, int vmaid, int rgid, int offset, BYTE *data);
 int __write(struct pcb_t *caller, int vmaid, int rgid, int offset, BYTE value);
 int init_mm(struct mm_struct *mm, struct pcb_t *caller);
 
+/* Our group's code */
+int tlb_cache_read(struct memphy_struct * mp, int pid, int pgnum, BYTE *value, int *frmnum);
+int tlb_cache_write(struct memphy_struct *mp, int pid, int pgnum, BYTE *value, int *frmnum);
+int TLBMEMPHY_read(struct memphy_struct * mp, int addr, BYTE *value);
+int TLBMEMPHY_write(struct memphy_struct * mp, int addr, BYTE data);
+int TLBMEMPHY_dump(struct memphy_struct * mp);
+int init_tlbmemphy(struct memphy_struct *mp, int max_size);
+int free_pcb_memph(struct pcb_t *caller);
+/* Our group's code */
+
 /* CPUTLB prototypes */
 int tlb_change_all_page_tables_of(struct pcb_t *proc,  struct memphy_struct * mp);
 int tlb_flush_tlb_of(struct pcb_t *proc, struct memphy_struct * mp);
 int tlballoc(struct pcb_t *proc, uint32_t size, uint32_t reg_index);
 int tlbfree_data(struct pcb_t *proc, uint32_t reg_index);
-int tlbread(struct pcb_t * proc, uint32_t source, uint32_t offset, uint32_t destination) ;
+int tlbread(struct pcb_t * proc, uint32_t source, uint32_t offset, uint32_t *destination) ;
 int tlbwrite(struct pcb_t * proc, BYTE data, uint32_t destination, uint32_t offset);
 int init_tlbmemphy(struct memphy_struct *mp, int max_size);
 int TLBMEMPHY_read(struct memphy_struct * mp, int addr, BYTE *value);

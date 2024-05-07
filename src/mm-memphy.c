@@ -6,6 +6,8 @@
 
 #include "mm.h"
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 /*
  *  MEMPHY_mv_csr - move MEMPHY cursor
@@ -132,6 +134,8 @@ int MEMPHY_format(struct memphy_struct *mp, int pagesz)
        newfst->fp_next = NULL;
        fst->fp_next = newfst;
        fst = newfst;
+
+       newfst->used = 0;
     }
 
     return 0;
@@ -161,13 +165,23 @@ int MEMPHY_dump(struct memphy_struct * mp)
    *     for tracing the memory content
    */
 
+   /* Our group's code */
    if(!mp || !mp->storage) {
       return -1;
    }
 
-   free(mp->storage);
-
-   // TLBMEMPHY_dump(&mp);
+   // char memory_content[256];
+   // char c[256];
+   // strcpy(memory_content, "Memory content [pos, content]: ");
+   int i;
+   for(i = 0; i < mp->maxsz; i ++) {
+      if(mp->storage[i] == (char)0) continue;
+      // sprintf(c, "[%d, %d]", i, mp->storage[i]);
+      // strcat(memory_content, c);
+   }
+   // strcat(memory_content, "\n\0");
+   // printf("%s\n", memory_content);
+   /* Our group's code */
 
    return 0;
 }
@@ -184,7 +198,6 @@ int MEMPHY_put_freefp(struct memphy_struct *mp, int fpn)
 
    return 0;
 }
-
 
 /*
  *  Init MEMPHY struct
