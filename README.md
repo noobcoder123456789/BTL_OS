@@ -1,1 +1,1 @@
-Về cơ bản là đã hoàn thiện TLB và MMU rồi nhưng vẫn còn thiếu synchronization và TIMESLOT implementation cho schedular
+Đây là bản final version. Đã hoàn thành toàn bộ code IMPLEMENTATION cho Bài Tập Lớn Operating System học kỳ 232 HCMUT.
