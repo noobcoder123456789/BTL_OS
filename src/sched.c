@@ -27,8 +27,10 @@ void init_scheduler(void) {
 #ifdef MLQ_SCHED
 	int i ;
 
-	for (i = 0; i < MAX_PRIO; i ++)
+	for (i = 0; i < MAX_PRIO; i ++) {
 		mlq_ready_queue[i].size = 0;
+		mlq_ready_queue[i].slot = MAX_PRIO - i;
+	}
 #endif
 	ready_queue.size = 0;
 	run_queue.size = 0;
@@ -50,9 +52,27 @@ struct pcb_t * get_mlq_proc(void) {
 	/* Our group's code */
 	pthread_mutex_lock(&queue_lock);
 	struct pcb_t * proc = NULL;	
-	int i;
-	for(i = 0; i < MAX_PRIO && empty(&mlq_ready_queue[i]); i++);
-	proc = dequeue(&mlq_ready_queue[i]);
+
+	int getProc = 0;
+	for(int i = 0; getProc == 0 && i < MAX_PRIO; i ++) {
+		if(empty(&mlq_ready_queue[i]) || mlq_ready_queue[i].slot <= 0) continue;
+		getProc = 1;
+		proc = dequeue(&mlq_ready_queue[i]);
+		mlq_ready_queue[i].slot--;
+	}
+
+	if(!getProc) {
+		for(int i = 0; i < MAX_PRIO; i ++) {
+			mlq_ready_queue[i].slot = MAX_PRIO - i;
+		}
+
+		for(int i = 0; i < MAX_PRIO; i ++) {	
+		if(empty(&mlq_ready_queue[i]) || mlq_ready_queue[i].slot <= 0) continue;
+			proc = dequeue(&mlq_ready_queue[i]);
+			mlq_ready_queue[i].slot--;
+		}
+	}
+
 	pthread_mutex_unlock(&queue_lock);
 	return proc;	
 	/* Our group's code */

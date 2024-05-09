@@ -304,10 +304,11 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 
 #ifdef CPU_TLB
     /* Update its online status of TLB (if needed) */
-    // int TLB_SIZE = caller->tlb->used_fp_list->owner->tlb_size;
-    // caller->tlb->used_fp_list->owner->pidd[pgn % TLB_SIZE] = caller->pid;
-    // caller->tlb->used_fp_list->owner->pgd[pgn % TLB_SIZE] = pgn;
-    // caller->tlb->used_fp_list->owner->frmnumd[pgn % TLB_SIZE] = PAGING_FPN_GROUPS_MODIFY(pte);
+    // int TLB_SIZE = caller->tlb->maxsz;
+		// caller->tlb->TLB[pgn % TLB_SIZE].TLB_pid = caller->pid;
+		// caller->tlb->TLB[pgn % TLB_SIZE].TLB_pgn = pgn;
+		// caller->tlb->TLB[pgn % TLB_SIZE].TLB_fpn = *fpn;
+		// caller->tlb->storage[pgn % TLB_SIZE] = ;
 #endif
   }
 
