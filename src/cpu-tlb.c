@@ -16,6 +16,7 @@
 #include "mm.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include "synctlb.h"
 #ifdef CPU_TLB
 
 int tlb_change_all_page_tables_of(struct pcb_t *proc,  struct memphy_struct * mp)
@@ -38,6 +39,7 @@ int tlb_flush_tlb_of(struct pcb_t *proc, struct memphy_struct * mp)
   /* TODO flush tlb cached*/
 
   /* Our group's code */
+  pthread_mutex_lock(&tlbmtx);
   if(!proc || !mp) {
     return -1;
   }
@@ -49,6 +51,7 @@ int tlb_flush_tlb_of(struct pcb_t *proc, struct memphy_struct * mp)
 		mp->TLB[i].TLB_pgn = 
 		mp->storage[i] = -1;
 	}
+  pthread_mutex_unlock(&tlbmtx);
   /* Our group's code */
   return 0;
 }
@@ -60,6 +63,7 @@ int tlb_flush_tlb_of(struct pcb_t *proc, struct memphy_struct * mp)
  */
 int tlballoc(struct pcb_t *proc, uint32_t size, uint32_t reg_index)
 {
+  pthread_mutex_lock(&tlbmtx);
   int addr, val;
 
   /* Our group's code */
@@ -93,6 +97,7 @@ int tlballoc(struct pcb_t *proc, uint32_t size, uint32_t reg_index)
     proc->tlb->storage[(i + pgn) % TLB_SIZE] = data_tmp;
     // proc->tlb->TLB[(i + pgn) % TLB_SIZE].storage = data_tmp;
   }
+  pthread_mutex_unlock(&tlbmtx);
   /* Our group's code */
 
   return val;
@@ -106,6 +111,7 @@ int tlballoc(struct pcb_t *proc, uint32_t size, uint32_t reg_index)
 int tlbfree_data(struct pcb_t *proc, uint32_t reg_index)
 {
   /* Our group's code */
+  pthread_mutex_lock(&tlbmtx);
   if(!proc) {
     return -1;
   }
@@ -133,6 +139,7 @@ int tlbfree_data(struct pcb_t *proc, uint32_t reg_index)
 	  	proc->tlb->storage[(i + pgn) % TLB_SIZE] = -1;
     }    
   }
+  pthread_mutex_unlock(&tlbmtx);
   /* Our group's code */
 
   return 0;
@@ -153,6 +160,7 @@ int tlbread(struct pcb_t * proc, uint32_t source,
    * we think that we need the return value after 
    * reading the TLB cache
    */
+  pthread_mutex_lock(&tlbmtx);
   BYTE data;
   int frmnum;
 	
@@ -207,6 +215,7 @@ int tlbread(struct pcb_t * proc, uint32_t source,
 		proc->tlb->TLB[pgn % TLB_SIZE].TLB_fpn = frmnum;
 		proc->tlb->storage[pgn % TLB_SIZE] = data;
 	}	
+  pthread_mutex_unlock(&tlbmtx);
 	/* Our group's code */
 
   return val;
@@ -221,6 +230,7 @@ int tlbread(struct pcb_t * proc, uint32_t source,
 int tlbwrite(struct pcb_t * proc, BYTE data,
              uint32_t destination, uint32_t offset)
 {
+  pthread_mutex_lock(&tlbmtx);
   int val, frmnum = -1;
 
   /* TODO retrieve TLB CACHED frame num of accessing page(s))*/
@@ -265,6 +275,7 @@ int tlbwrite(struct pcb_t * proc, BYTE data,
 		proc->tlb->TLB[pgn % TLB_SIZE].TLB_fpn = frmnum;
 		proc->tlb->storage[pgn % TLB_SIZE] = data;
 	}	
+  pthread_mutex_unlock(&tlbmtx);
 	/* Our group's code */
 
   return val;
