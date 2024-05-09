@@ -20,9 +20,12 @@
 #include "mm.h"
 #include <stdlib.h>
 #include <stdio.h>
-#ifdef CPU_TLB
+#include <pthread.h>
+// #ifdef CPU_TLB
 
 #define init_tlbcache(mp,sz,...) init_memphy(mp, sz, (1, ##__VA_ARGS__))
+
+pthread_mutex_t tlbmtx;
 
 /*
  *  tlb_cache_read read TLB cache device
@@ -167,6 +170,7 @@ int init_tlbmemphy(struct memphy_struct *mp, int max_size)
    mp->maxsz = max_size;
 
    // /* Our group's code */
+   pthread_mutex_init(&tlbmtx, NULL);
    mp->TLB = (struct tlb_property_struct *)malloc(max_size * sizeof(struct tlb_property_struct));
    for(int i = 0; i < max_size; i ++) {
       mp->TLB[i].TLB_pid = 
@@ -174,7 +178,6 @@ int init_tlbmemphy(struct memphy_struct *mp, int max_size)
       mp->TLB[i].TLB_pgn = 
       mp->storage[i] = -1;
    }
-   // mp->TLB_entry = (int*)malloc(max_size*sizeof(int));
    // /* Our group's code */
 
    mp->rdmflg = 1;
@@ -182,4 +185,4 @@ int init_tlbmemphy(struct memphy_struct *mp, int max_size)
    return 0;
 }
 
-#endif
+// #endif

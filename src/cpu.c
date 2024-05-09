@@ -45,7 +45,7 @@ int write(
 					// [destination] + [offset]
 	return write_mem(proc->regs[destination] + offset, proc, data);
 } 
-
+ 
 int run(struct pcb_t * proc) {
 	/* Check if Program Counter point to the proper instruction */
 	if (proc->pc >= proc->code->size) {
