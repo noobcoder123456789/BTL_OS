@@ -16,11 +16,7 @@ void enqueue(struct queue_t * q, struct pcb_t * proc) {
                 return;
         }
 
-        int prio_position, i;
-        for(prio_position = 0; prio_position < q->size && q->proc[prio_position]->prio <= proc->prio; prio_position++);
-        for(i = q->size; i > prio_position; q->proc[i] = q->proc[i - 1], i--);
-
-        q->proc[prio_position] = proc;
+        q->proc[q->size] = proc;
         q->size++;
         /* Our group's code */
 }
@@ -42,4 +38,3 @@ struct pcb_t * dequeue(struct queue_t * q) {
 	return highest_pcb_priority;
         /* Our group's code */
 }
-
