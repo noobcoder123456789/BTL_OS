@@ -285,8 +285,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 
     /* Update its online status of the target page */
     //pte_set_fpn() & mm->pgd[pgn];
-    *fpn = PAGING_FPN_GROUPS_MODIFY(pte);
-    pte_set_fpn(&caller->mm->pgd[pgn], *fpn);
+    pte_set_fpn(&mm->pgd[pgn], vicfpn);
 
     enlist_pgn_node(&caller->mm->fifo_pgn,pgn);
     pte = caller->mm->pgd[pgn];
