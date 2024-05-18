@@ -176,18 +176,6 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
   /* Our group's code */
   struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
   struct vm_rg_struct *currg = get_symrg_byid(caller->mm, rgid);
-
-  int page_start = PAGING_PGN(currg->rg_start);
-  int page_end = PAGING_PGN(currg->rg_end);
-
-  for(int i = page_end - 1; i >= page_start; i --) {
-    uint32_t pte = caller->mm->pgd[i];
-    
-    // int fpn = PAGING_FPN_GROUPS_MODIFY(pte);
-    // MEMPHY_put_freefp(caller->mram, fpn);
-    // init_pte(&caller->mm->pgd[i], 0, 0, 0, 0, 0, 0);
-    CLRBIT(pte, PAGING_PTE_PRESENT_MASK);
-  }  
   
   if(currg == NULL || cur_vma == NULL) /* Invalid memory identify */
       return -1;
