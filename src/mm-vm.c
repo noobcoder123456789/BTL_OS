@@ -255,15 +255,21 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 
     /* Get free frame in MEMSWP */
     if(MEMPHY_get_freefp(caller->active_mswp, &swpfpn) < 0) {      
+      int CHECK_FLAG = 0;
       for(int j = 0; j < PAGING_MAX_MMSWP; j ++) {
         if(MEMPHY_get_freefp(caller->mswp[j], &swpfpn) == 0) {
           /* Do swap frame from MEMRAM to MEMSWP and vice versa*/
           /* Copy victim frame to swap */        
+	  CHECK_FLAG = 1;
           __swap_cp_page(caller->mram, vicfpn, caller->mswp[j], swpfpn);
           MEMPHY_put_freefp(caller->mswp[i], tgtfpn);
           caller->active_mswp = caller->mswp[j];
           break;
         }
+      }
+
+      if(CHECK_FLAG == 0) {
+	return -3000;
       }
     } else {
       __swap_cp_page(caller->mram, vicfpn, caller->active_mswp, swpfpn);
