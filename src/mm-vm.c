@@ -183,11 +183,6 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
 
   /*enlist the obsoleted memory region */  
   enlist_vm_freerg_list(caller->mm, currg);
-  // int rg_start = caller->mm->symrgtbl[rgid].rg_start;
-  // int rg_end = caller->mm->symrgtbl[rgid].rg_end;
-  // caller->mm->mmap->sbrk -= (rg_end - rg_start);
-  // currg->rg_start = currg->rg_end = 0;
-  // currg->rg_next = NULL;
   
 #ifdef GROUP_DEBUG
   print_symbol_table(caller);
