@@ -191,11 +191,11 @@ int tlbread(struct pcb_t * proc, uint32_t source,
 
 	/* Our group's code */
   int val;
-  if(frmnum < 0) {
-  	val = __read(proc, 0, source, offset, &data);
-  } else {
+  if(frmnum >= 0) {
 	val = 0;
-  }
+  } else {
+	val = __read(proc, 0, source, offset, &data);
+  }  
 	/* Our group's code */
 
   *destination = (uint32_t) data;
