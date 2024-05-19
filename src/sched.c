@@ -62,6 +62,7 @@ struct pcb_t * get_mlq_proc(void) {
 		getProc = 1;
 		proc = dequeue(&mlq_ready_queue[i]);
 		mlq_ready_queue[i].slot--;
+		break;
 	}
 
 	if(!getProc) {
@@ -74,6 +75,7 @@ struct pcb_t * get_mlq_proc(void) {
 
 			proc = dequeue(&mlq_ready_queue[i]);
 			mlq_ready_queue[i].slot--;
+			break;
 		}
 	}
 
