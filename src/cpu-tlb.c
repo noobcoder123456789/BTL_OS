@@ -191,7 +191,11 @@ int tlbread(struct pcb_t * proc, uint32_t source,
 
 	/* Our group's code */
   int val;
-  val = __read(proc, 0, source, offset, &data);
+  if(frmnum < 0) {
+  	val = __read(proc, 0, source, offset, &data);
+  } else {
+	val = 0;
+  }
 	/* Our group's code */
 
   *destination = (uint32_t) data;
@@ -254,11 +258,8 @@ int tlbwrite(struct pcb_t * proc, BYTE data,
   MEMPHY_dump(proc->mram);
 #endif
 
-	if(frmnum < 0) {
-		val = __write(proc, 0, destination, offset, data);
-	} else {
-		val = 0;
-	}
+	
+  val = __write(proc, 0, destination, offset, data);
 
   /* TODO update TLB CACHED with frame num of recent accessing page(s)*/
   /* by using tlb_cache_read()/tlb_cache_write()*/
