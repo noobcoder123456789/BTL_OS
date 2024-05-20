@@ -221,10 +221,10 @@ static void read_config(const char * path) {
 
 int main(int argc, char * argv[]) {
 	/* Read config */
-	// if (argc != 2) {
-	// 	printf("Usage: os [path to configure file]\n");
-	// 	return 1;
-	// }
+	if (argc != 2) {
+	 	printf("Usage: os [path to configure file]\n");
+	 	return 1;
+	}
 	char path[100];
 	path[0] = '\0';
 	strcat(path, "input/");
