@@ -229,7 +229,6 @@ int main(int argc, char * argv[]) {
 	path[0] = '\0';
 	strcat(path, "input/");
 	strcat(path, argv[1]);
-	// strcat(path, "os_1_tlbsz_singleCPU_mlq");
 	read_config(path);
 
 	pthread_t * cpu = (pthread_t*)malloc(num_cpus * sizeof(pthread_t));
