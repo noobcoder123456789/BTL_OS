@@ -50,11 +50,11 @@ struct pcb_t * get_mlq_proc(void) {
 	 */	
 
 	/* Our group's code */
-	pthread_mutex_lock(&queue_lock);
-	struct pcb_t * proc = NULL;	
-	
+	struct pcb_t * proc = NULL;
 	int getProc = 0;
-	for(int i = 0; getProc == 0 && i < MAX_PRIO; i ++) {
+	
+	pthread_mutex_lock(&queue_lock);			
+	for(int i = 0; i < MAX_PRIO; i ++) {
 		if(empty(&mlq_ready_queue[i]) || mlq_ready_queue[i].slot <= 0) {
 			continue;
 		}
