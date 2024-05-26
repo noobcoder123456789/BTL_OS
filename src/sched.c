@@ -112,8 +112,8 @@ void finish_scheduler(void) {}
 #else
 struct pcb_t * get_proc(void) {
 	/* Our group's code */
-	pthread_mutex_lock(&queue_lock);
 	struct pcb_t * proc = NULL;
+	pthread_mutex_lock(&queue_lock);	
 	/*TODO: get a process from [ready_queue].
 	 * Remember to use lock to protect the queue.
 	 * */
